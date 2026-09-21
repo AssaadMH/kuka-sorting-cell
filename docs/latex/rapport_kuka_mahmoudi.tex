@@ -1,0 +1,1337 @@
+% !TeX program = xelatex
+% ============================================================
+%  RAPPORT DE PROJET – AUTOMATISME INDUSTRIEL
+%  Commande d'un Robot KUKA par API en Langage Ladder
+%  Mahmoudi Assaad – Génie Électrique / Automatique Industrielle
+%  Année Universitaire 2025–2026
+% ============================================================
+
+\documentclass[12pt, a4paper]{report}
+
+% ── Encodage, langue & police ────────────────────────────────
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec}
+  \setmainfont{Latin Modern Roman}
+  \setsansfont{Latin Modern Sans}
+  \setmonofont{Latin Modern Mono}
+\fi
+\usepackage[french]{babel}
+
+% ── Mise en page ─────────────────────────────────────────────
+\usepackage[
+  a4paper,
+  top=2.5cm, bottom=2.5cm,
+  left=3cm, right=2.5cm,
+  headheight=16pt
+]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ── Typographie ──────────────────────────────────────────────
+\usepackage{microtype}
+\usepackage{csquotes}
+\raggedbottom
+\emergencystretch=3em
+\hfuzz=10000pt
+\vfuzz=10000pt
+\hbadness=10000
+\vbadness=10000
+
+% ── Couleurs ─────────────────────────────────────────────────
+\usepackage[dvipsnames, table]{xcolor}
+\definecolor{bleuFonce}{RGB}{31,  78, 121}
+\definecolor{bleuMoyen}{RGB}{46, 117, 182}
+\definecolor{bleuClair}{RGB}{214, 228, 240}
+\definecolor{orange}{RGB}{197,  90,  17}
+\definecolor{grisClaire}{RGB}{242, 242, 242}
+\definecolor{vertCode}{RGB}{0,  128,   0}
+\definecolor{rougeCode}{RGB}{163,  21,  21}
+\definecolor{codeBg}{RGB}{248, 248, 248}
+\definecolor{vertEtape}{RGB}{0, 153, 76}
+\definecolor{rougeAlerte}{RGB}{192, 0, 0}
+
+% ── Graphiques & TikZ ────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning,
+                fit, backgrounds, shadows, calc, decorations.pathreplacing}
+
+% ── Tableaux ─────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{colortbl}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlength{\tabcolsep}{4pt}
+
+% ── Code source ──────────────────────────────────────────────
+\usepackage{listings}
+\lstdefinestyle{ladder}{
+  backgroundcolor=\color{codeBg},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{bleuMoyen},
+  framesep=6pt,
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  tabsize=2,
+  showstringspaces=false,
+  commentstyle=\color{vertCode}\itshape,
+  keywordstyle=\color{bleuFonce}\bfseries,
+}
+
+% ── En-têtes & pieds de page ─────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{bleuMoyen}\leftmark}
+\fancyhead[R]{\small\color{bleuMoyen}\rightmark}
+\fancyfoot[C]{\small\color{bleuMoyen}\thepage}
+\fancyfoot[L]{\small\color{gray}Mahmoudi Assaad --- 2025/2026}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% ── Boîtes ───────────────────────────────────────────────────
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{infobox}[1][]{
+  colback=bleuClair, colframe=bleuMoyen,
+  fonttitle=\bfseries\color{bleuFonce},
+  title={#1}, arc=4pt, boxrule=1pt,
+  left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+\newtcolorbox{alertbox}[1][]{
+  colback=orange!10, colframe=orange,
+  fonttitle=\bfseries\color{orange},
+  title={#1}, arc=4pt, boxrule=1pt,
+}
+
+% ── Liens hypertexte ─────────────────────────────────────────
+\usepackage[
+  hypertexnames=false,
+  colorlinks=true,
+  linkcolor=bleuFonce,
+  citecolor=bleuMoyen,
+  urlcolor=orange,
+  pdftitle={Rapport - Commande Robot KUKA par Langage Ladder},
+  pdfauthor={Mahmoudi Assaad}
+]{hyperref}
+
+% ── Mathématiques ────────────────────────────────────────────
+\usepackage{amsmath, amssymb}
+\usepackage{siunitx}
+\sisetup{locale=FR, per-mode=symbol}
+
+% ── Listes & bibliographie ───────────────────────────────────
+\usepackage{enumitem}
+\usepackage[
+  backend=biber,
+  style=ieee,
+  sorting=none
+]{biblatex}
+\addbibresource{references.bib}
+
+% ── Macros ───────────────────────────────────────────────────
+\newcommand{\plc}{PLC}
+\newcommand{\api}{API}
+\newcommand{\kuka}{KUKA}
+\newcommand{\krl}{KRL}
+\newcommand{\profinet}{PROFINET}
+\newcommand{\tia}{TIA Portal}
+\newcommand{\siemens}{Siemens S7-1200}
+
+% ============================================================
+\begin{document}
+% ============================================================
+
+% ── Page de garde ────────────────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{1.5cm}
+
+  \begin{tikzpicture}
+    \fill[bleuFonce] (0,0) rectangle (\textwidth, 1.4cm);
+    \node[white, font=\large\bfseries, text width=0.95\textwidth, align=center]
+      at (0.5\textwidth, 0.7cm)
+      {D\'EPARTEMENT DE G\'ENIE \'ELECTRIQUE --- AUTOMATIQUE INDUSTRIELLE};
+  \end{tikzpicture}
+
+  \vspace{1.5cm}
+  {\color{gray}\large Rapport de Projet de Fin d'\'Etudes}\\[0.5cm]
+  \rule{0.6\textwidth}{0.6pt}
+  \vspace{1cm}
+
+  {\huge\bfseries\color{bleuFonce}
+    Conception et R\'ealisation d'un\\[0.3cm]
+    Syst\`eme Automatis\'e de Tri\\[0.3cm]
+    par Robot Industriel \kuka{}}
+
+  \vspace{0.8cm}
+  {\Large\color{bleuMoyen}
+    Commande par \api{} Siemens S7-1200\\
+    Programmation en Langage Ladder}
+
+  \vspace{1.2cm}
+  \rule{0.6\textwidth}{0.6pt}
+  \vspace{1.2cm}
+
+  \begin{tcolorbox}[
+    colback=bleuClair, colframe=bleuMoyen,
+    width=0.75\textwidth, arc=6pt,
+    left=12pt, right=12pt, top=10pt, bottom=10pt
+  ]
+    \centering
+    {\large\bfseries R\'ealis\'e par :}\\[0.4cm]
+    {\Large\color{bleuFonce}\textbf{Mahmoudi Assaad}}\\[0.5cm]
+    {\normalsize Niveau : G\'enie \'Electrique --- Automatique Industrielle}\\[0.3cm]
+    {\normalsize Ann\'ee Universitaire : \textbf{2025 -- 2026}}
+  \end{tcolorbox}
+
+  \vfill
+  \begin{tikzpicture}
+    \fill[bleuFonce] (0,0) rectangle (\textwidth, 0.9cm);
+    \node[white, font=\normalsize] at (0.5\textwidth, 0.45cm)
+      {Automatisme Industriel --- Robotique --- Programmation Ladder};
+  \end{tikzpicture}
+\end{titlepage}
+
+\cleardoublepage
+
+% ── D\'edicace ─────────────────────────────────────────────────
+\chapter*{D\'edicace}
+\thispagestyle{empty}
+\vspace*{4cm}
+\begin{flushright}
+  \itshape\large
+  \`A ma famille, pour son soutien ind\'efectible\\
+  tout au long de ce parcours universitaire.\\[1cm]
+  \`A mes enseignants et encadrants,\\
+  pour la qualit\'e de leur transmission du savoir.\\[1cm]
+  \`A tous ceux qui ont cru en mes capacit\'es.
+\end{flushright}
+\cleardoublepage
+
+% ── Remerciements ────────────────────────────────────────────
+\chapter*{Remerciements}
+\addcontentsline{toc}{chapter}{Remerciements}
+
+Je tiens \`a exprimer ma profonde gratitude \`a l'ensemble des personnes qui ont contribu\'e,
+de pr\`es ou de loin, \`a la r\'ealisation de ce projet d'automatisme industriel.
+
+Mes sinc\`eres remerciements vont en premier lieu \`a mes encadrants p\'edagogiques du
+d\'epartement G\'enie \'Electrique, dont les conseils avis\'es, la disponibilit\'e et la rigueur
+scientifique ont \'et\'e d\'eterminants pour la r\'eussite de ce travail.
+
+Je remercie \'egalement les responsables du laboratoire d'automatisme industriel pour
+l'acc\`es aux \'equipements de simulation et aux ressources documentaires n\'ecessaires.
+
+\cleardoublepage
+
+% ── R\'esum\'e ───────────────────────────────────────────────────
+\chapter*{R\'esum\'e}
+\addcontentsline{toc}{chapter}{R\'esum\'e}
+
+\begin{infobox}[R\'esum\'e --- Fran\c{c}ais]
+Ce rapport pr\'esente la conception et la r\'ealisation compl\`ete d'un syst\`eme automatis\'e de
+tri et de manipulation de pi\`eces industrielles. Le syst\`eme int\`egre un robot industriel
+\kuka{} \`a 6 axes command\'e par un automate programmable \siemens{}, programm\'e
+en langage \textbf{Ladder} sous l'environnement \tia{}.
+
+La communication entre l'automate et le contr\^oleur robot KRC4 est assur\'ee par le
+protocole \profinet{} IO. Le document couvre l'analyse fonctionnelle (GRAFCET),
+la programmation Ladder compl\`ete, les sch\'emas \'electriques et la gestion de la
+s\'ecurit\'e industrielle (PLd/SIL2).
+
+\textbf{Mots-cl\'es :} Robot \kuka{}, \api{} \siemens{}, Langage Ladder,
+\profinet{}, GRAFCET, Automatisme industriel, S\'ecurit\'e fonctionnelle.
+\end{infobox}
+
+\vspace{1cm}
+
+\begin{infobox}[Abstract --- English]
+This report presents the complete design and implementation of an automated industrial
+part sorting and handling system. The system integrates a 6-axis \kuka{} industrial
+robot controlled by a Siemens S7-1200 PLC, programmed in \textbf{Ladder language}
+under TIA Portal.
+
+Communication between the PLC and the KRC4 robot controller is handled via
+\profinet{} IO. The document covers functional analysis (GRAFCET), complete Ladder
+programming, electrical schematics and industrial safety management (PLd/SIL2).
+
+\textbf{Keywords:} \kuka{} Robot, Siemens S7-1200 PLC, Ladder Language,
+\profinet{}, GRAFCET, Industrial Automation, Functional Safety.
+\end{infobox}
+
+\cleardoublepage
+
+% ── Tables ───────────────────────────────────────────────────
+\tableofcontents
+\cleardoublepage
+\listoffigures
+\addcontentsline{toc}{chapter}{Liste des figures}
+\cleardoublepage
+\listoftables
+\addcontentsline{toc}{chapter}{Liste des tableaux}
+\cleardoublepage
+
+% ── Abr\'eviations ─────────────────────────────────────────────
+\chapter*{Liste des Abr\'eviations}
+\addcontentsline{toc}{chapter}{Liste des abr\'eviations}
+
+\begin{tabular}{@{}lL{10cm}@{}}
+  \toprule
+  \textbf{Abr\'eviation} & \textbf{Signification} \\
+  \midrule
+  \api{}    & Automate Programmable Industriel \\
+  \plc{}    & Programmable Logic Controller \\
+  \kuka{}   & Keller und Knappich Augsburg \\
+  \krl{}    & KUKA Robot Language \\
+  KRC4      & KUKA Robot Controller 4\textsuperscript{e} g\'en\'eration \\
+  \profinet & Process Field Network (Ethernet industriel) \\
+  \tia      & Totally Integrated Automation Portal (Siemens) \\
+  GRAFCET   & Graphe Fonctionnel de Commande \'Etape/Transition \\
+  IEC       & International Electrotechnical Commission \\
+  SIL       & Safety Integrity Level \\
+  PL        & Performance Level \\
+  TOR       & Tout Ou Rien \\
+  NO / NF   & Normalement Ouvert / Normalement Ferm\'e \\
+  FDC       & Fin De Course \\
+  EV        & \'Electrovalve \\
+  \bottomrule
+\end{tabular}
+
+\cleardoublepage
+
+% ============================================================
+%  CHAPITRE 1
+% ============================================================
+\chapter{Introduction G\'en\'erale}
+
+\section{Contexte industriel}
+
+L'automatisation industrielle constitue aujourd'hui l'un des piliers fondamentaux
+des cha\^ines de production modernes. Face aux exigences croissantes de productivit\'e,
+de qualit\'e et de s\'ecurit\'e, les entreprises industrielles font appel \`a des syst\`emes
+automatis\'es int\'egrant des robots, des automates programmables et des r\'eseaux de
+communication industriels.
+
+La quatri\`eme r\'evolution industrielle --- communément d\'esign\'ee sous le terme
+\emph{Industrie 4.0} --- acc\'el\`ere cette transformation en int\'egrant des technologies
+num\'eriques telles que l'Internet des Objets industriel (\emph{IIoT}),
+l'intelligence artificielle et les syst\`emes cyber-physiques.
+
+\section{Probl\'ematique}
+
+\begin{alertbox}[Probl\'ematique du projet]
+  Comment concevoir et programmer un syst\`eme automatis\'e de tri de pi\`eces int\'egrant
+  un robot industriel \kuka{} command\'e par un \api{} \siemens{} en langage Ladder,
+  en assurant la s\'ecurit\'e des op\'erateurs et la fiabilit\'e du cycle de production ?
+\end{alertbox}
+
+\section{Objectifs du projet}
+
+\begin{enumerate}[label=\textbf{\arabic*.}, leftmargin=*, itemsep=4pt]
+  \item Concevoir l'architecture mat\'erielle et logicielle du syst\`eme automatis\'e
+  \item Programmer l'\api{} en langage Ladder sous \tia{}
+  \item Assurer la communication PLC -- robot \kuka{} via \profinet{}
+  \item Mod\'eliser le comportement s\'equentiel par GRAFCET
+  \item Impl\'ementer les fonctions de s\'ecurit\'e industrielle (PLd/SIL2)
+  \item Simuler et valider le fonctionnement global du syst\`eme
+\end{enumerate}
+
+% ============================================================
+%  CHAPITRE 2 — ROBOT KUKA
+% ============================================================
+\chapter{Pr\'esentation du Robot KUKA}
+\label{chap:kuka}
+
+\section{Architecture m\'ecanique du robot 6 axes}
+
+\begin{table}[H]
+  \centering
+  \caption{Description des axes du robot \kuka{} 6 axes}
+  \label{tab:axes}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{C{1.2cm} C{3cm} L{9cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Axe} &
+    \color{white}\textbf{D\'esignation} &
+    \color{white}\textbf{Description du mouvement} \\
+    \midrule
+    A1 & Base         & Rotation de la base autour de l'axe vertical \\
+    A2 & Bras inf.    & Balancement du bras inf\'erieur \\
+    A3 & Bras sup.    & \'El\'evation du bras sup\'erieur \\
+    A4 & Poignet rot. & Rotation du poignet autour de l'axe du bras \\
+    A5 & Poignet inc. & Inclinaison du poignet \\
+    A6 & Bride        & Rotation finale de la bride porte-outil \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Caract\'eristiques techniques}
+
+\begin{table}[H]
+  \centering
+  \caption{Caract\'eristiques techniques du robot \kuka{} KR~6 R900}
+  \label{tab:carac_kuka}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{5.5cm} L{8.5cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Param\`etre} &
+    \color{white}\textbf{Valeur / Sp\'ecification} \\
+    \midrule
+    Nombre d'axes            & 6 (robot articul\'e s\'erie KR) \\
+    Charge utile nominale    & \SI{6}{\kilogram} \\
+    Rayon d'action           & \SI{900}{\milli\meter} \\
+    R\'ep\'etabilit\'e       & $\pm$\,\SI{0.05}{\milli\meter} \\
+    Masse robot              & \SI{52}{\kilogram} \\
+    Type de contr\^oleur     & KRC4 compact \\
+    Langage de programmation & \krl{} (KUKA Robot Language) \\
+    Communication            & \profinet{}, EtherNet/IP \\
+    Alimentation             & \SI{400}{\volt} AC / \SI{50}{\hertz} \\
+    Degr\'e de protection    & IP54 \\
+    Temp\'erature de service & \SI{10}{\degreeCelsius} \`a \SI{55}{\degreeCelsius} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Sch\'ema du robot 6 axes}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[scale=1.0]
+    \fill[bleuFonce!80] (-1.2,0) rectangle (1.2,0.5);
+    \node[white, font=\small\bfseries] at (0,0.25) {SOCLE};
+
+    \fill[bleuMoyen] (-0.7,0.5) rectangle (0.7,1.5);
+    \draw[white, very thick] (0,0.5) -- (0,1.5);
+    \node[white, font=\footnotesize\bfseries] at (-1.5,1.0) {A1};
+    \draw[-{Stealth}, orange, thick] (0.9,1.0) arc (0:270:0.35);
+    \node[orange, font=\footnotesize\bfseries] at (1.5,0.75) {Rot.};
+
+    \fill[bleuMoyen!70] (-0.4,1.5) rectangle (0.4,3.2);
+    \fill[bleuFonce] (-0.5,1.4) rectangle (0.5,1.65);
+    \node[white, font=\footnotesize\bfseries] at (-1.5,2.3) {A2};
+    \draw[-{Stealth}, orange, thick] (0.55,1.55) arc (-90:90:0.4);
+    \node[orange, font=\footnotesize\bfseries] at (1.4,1.85) {Bascule};
+
+    \fill[bleuMoyen!50] (-0.35,3.2) rectangle (0.35,4.6);
+    \fill[bleuFonce] (-0.45,3.1) rectangle (0.45,3.35);
+    \node[white, font=\footnotesize\bfseries] at (-1.5,3.9) {A3};
+    \draw[-{Stealth}, orange, thick] (0.5,3.22) arc (-90:90:0.35);
+    \node[orange, font=\footnotesize\bfseries] at (1.4,3.5) {Elev.};
+
+    \fill[bleuFonce!60] (-0.3,4.6) rectangle (0.3,5.2);
+    \fill[bleuMoyen!40] (-0.25,5.2) rectangle (0.25,5.7);
+    \node[font=\footnotesize\bfseries, bleuFonce] at (-1.5,4.9) {A4};
+    \node[font=\footnotesize\bfseries, bleuFonce] at (-1.5,5.45) {A5};
+    \draw[-{Stealth}, orange, thick] (0.38,4.9) arc (0:180:0.18);
+    \draw[-{Stealth}, orange, thick] (0.35,5.45) arc (-90:90:0.22);
+
+    \fill[orange!80] (-0.22,5.7) rectangle (0.22,6.0);
+    \fill[orange] (-0.15,6.0) rectangle (0.15,6.25);
+    \node[font=\footnotesize\bfseries, orange] at (-1.5,5.9) {A6};
+    \draw[-{Stealth}, bleuFonce, thick] (0.3,5.85) arc (0:270:0.22);
+
+    \draw[gray, dashed, thin] (-0.7,0.25) -- (-1.2,0.25);
+    \draw[gray, dashed, thin] (-0.7,2.3)  -- (-1.2,2.3);
+    \draw[gray, dashed, thin] (-0.45,3.9) -- (-1.2,3.9);
+    \draw[gray, dashed, thin] (-0.38,4.9) -- (-1.2,4.9);
+    \draw[gray, dashed, thin] (-0.35,5.45)-- (-1.2,5.45);
+    \draw[gray, dashed, thin] (-0.25,5.9) -- (-1.2,5.9);
+
+    \node[font=\footnotesize, align=left] at (5.5,3.5)
+      {\textbf{L\'egende :}\\[4pt]
+       \textcolor{bleuFonce}{$\blacksquare$} Structure m\'ecanique\\
+       \textcolor{orange}{$\blacksquare$} Articulations / outil\\
+       \textcolor{orange}{$\rightarrow$} Sens de rotation};
+  \end{tikzpicture}
+  \caption{Sch\'ema simplifi\'e du robot \kuka{} 6 axes}
+  \label{fig:robot6axes}
+\end{figure}
+
+% ============================================================
+%  CHAPITRE 3 — AUTOMATE PROGRAMMABLE
+% ============================================================
+\chapter{Pr\'esentation de l'Automate Programmable}
+\label{chap:plc}
+
+\section{Siemens S7-1200 : sp\'ecifications}
+
+\begin{table}[H]
+  \centering
+  \caption{Sp\'ecifications techniques du \siemens{}}
+  \label{tab:s71200}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{5.5cm} L{8.5cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Param\`etre} &
+    \color{white}\textbf{Sp\'ecification} \\
+    \midrule
+    M\'emoire programme        & 50 \`a \SI{150}{\kilo\byte} \\
+    E/S num\'eriques int\'egr\'ees & 14 DI / 10 DO (CPU 1214C) \\
+    Entr\'ees analogiques      & 2 AI int\'egr\'ees \\
+    Port Ethernet              & 1 port RJ45 \profinet{} int\'egr\'e \\
+    Protocoles                 & \profinet{} IO, Modbus TCP, TCP/IP \\
+    Temps de cycle             & \SI{0.085}{\micro\second}/instruction \\
+    Alimentation               & \SI{24}{\volt} DC \\
+    Modules d'extension        & Jusqu'\`a 8 modules SM/SB \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Sch\'ema du cycle de scrutation}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    bloc/.style={
+      draw=bleuMoyen, fill=bleuClair, rounded corners=6pt,
+      minimum width=4.5cm, minimum height=1.2cm,
+      font=\bfseries\normalsize, align=center,
+      drop shadow={shadow xshift=2pt, shadow yshift=-2pt, opacity=0.3}
+    },
+    arr/.style={-{Stealth[length=8pt]}, very thick, bleuFonce}
+  ]
+    \node[bloc, fill=bleuFonce, text=white] (init) at (0,0)
+      {Initialisation\\CPU};
+    \node[bloc] (lect) at (0,-2.2)
+      {\textcolor{bleuFonce}{1.} Lecture\\des entr\'ees};
+    \node[bloc] (exec) at (0,-4.4)
+      {\textcolor{bleuFonce}{2.} Ex\'ecution\\du programme};
+    \node[bloc] (ecri) at (0,-6.6)
+      {\textcolor{bleuFonce}{3.} \'Ecriture\\des sorties};
+    \node[bloc, fill=orange!20, draw=orange] (comm) at (0,-8.8)
+      {\textcolor{orange}{\textbf{4.}} Communication\\\profinet{} / E/S};
+
+    \draw[arr] (init) -- (lect);
+    \draw[arr] (lect) -- (exec);
+    \draw[arr] (exec) -- (ecri);
+    \draw[arr] (ecri) -- (comm);
+
+    \draw[arr, dashed, orange, very thick]
+      (comm.east) -- ++(2.2,0) -- ++(0,8.8) -- (lect.east)
+      node[midway, right=1.8cm, font=\small\bfseries\color{orange},
+           align=center] {Cycle\\r\'ep\'et\'e\\en continu};
+
+    \node[font=\footnotesize\itshape, color=gray, align=center] at (5.5,-4.4)
+      {Dur\'ee typique\\$<$ \SI{10}{\milli\second}};
+  \end{tikzpicture}
+  \caption{Cycle de scrutation (scan) de l'automate \siemens{}}
+  \label{fig:scan}
+\end{figure}
+
+% ============================================================
+%  CHAPITRE 4 — ARCHITECTURE
+% ============================================================
+\chapter{Architecture G\'en\'erale du Syst\`eme}
+\label{chap:archi}
+
+\section{Architecture globale}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    scale=0.84, transform shape,
+    box/.style={
+      draw=bleuMoyen, fill=bleuClair, rounded corners=6pt,
+      minimum width=3.4cm, minimum height=1.2cm,
+      font=\small\bfseries, align=center,
+      drop shadow={shadow xshift=2pt, shadow yshift=-2pt, opacity=0.3}
+    },
+    sensor/.style={box, fill=orange!20, draw=orange},
+    robot/.style={box, fill=bleuFonce, text=white, draw=bleuFonce},
+    arrow/.style={-{Stealth[length=7pt]}, thick},
+    lbl/.style={font=\footnotesize\itshape, fill=white, inner sep=2pt}
+  ]
+    \node[sensor]      (capt)  at (0,4)    {Capteurs\\I0.0 -- I1.1};
+    \node[sensor]      (ihm)   at (0,0)    {IHM\\Boutons + Voyants};
+    \node[box]         (plc)   at (4,2)    {\api{}\\Siemens S7-1200};
+    \node[box]         (krc4)  at (8,2)    {Contr\^oleur\\KRC4};
+    \node[robot]       (robot) at (12,2)   {Robot\\KUKA 6 axes};
+    \node[box]         (conv)  at (4,-1.5) {Convoyeur\\Moteur + VFD};
+    \node[box]         (verin) at (8,-1.5) {V\'erin\\Pneumatique};
+
+    \draw[arrow, bleuFonce]
+      (capt.east) -- ++(1.2,0) |- (plc.north)
+      node[pos=0.4, lbl] {\SI{24}{V} DC};
+    \draw[arrow, bleuFonce]
+      (ihm.east) -- ++(1.2,0) |- (plc.south)
+      node[pos=0.4, lbl] {Q0.4/Q0.5};
+    \draw[arrow, bleuFonce, very thick]
+      (plc) -- (krc4)
+      node[midway, lbl, above] {\profinet{} IO};
+    \draw[arrow, bleuFonce, very thick]
+      (krc4) -- (robot)
+      node[midway, lbl, above] {Servo axes};
+    \draw[arrow, bleuFonce]
+      (plc.south) -- (conv.north)
+      node[midway, lbl, right] {Q0.0};
+    \draw[arrow, bleuFonce]
+      (plc.east) ++(0,-0.3) -- ++(1.5,0) |- (verin.west)
+      node[pos=0.3, lbl, above] {Q0.2/Q0.3};
+    \draw[arrow, dashed, orange, thick]
+      (krc4.south) -- (verin.north)
+      node[midway, lbl, right] {\$OUT robot};
+
+    \begin{pgfonlayer}{background}
+      \node[
+        draw=bleuMoyen, dashed, fill=bleuClair, fill opacity=0.15,
+        rounded corners=10pt,
+        fit=(plc)(krc4)(robot),
+        inner sep=14pt,
+        label={[bleuMoyen, font=\small\bfseries]above:\profinet{} --- 100\,Mbit/s}
+      ] {};
+    \end{pgfonlayer}
+  \end{tikzpicture}
+  \caption{Architecture globale du syst\`eme automatis\'e}
+  \label{fig:archi}
+\end{figure}
+
+\section{Table des entr\'ees / sorties}
+
+\begin{table}[H]
+  \centering
+  \caption{Table compl\`ete des entr\'ees/sorties de l'\api{}}
+  \label{tab:es}
+  \small
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{2.7cm} C{1.7cm} C{1.7cm} L{6.4cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{D\'esignation} &
+    \color{white}\textbf{Type} &
+    \color{white}\textbf{Adresse} &
+    \color{white}\textbf{Description} \\
+    \midrule
+    Bouton Marche    & Entr\'ee TOR & I0.0 & D\'emarrage du cycle automatique \\
+    Bouton Arr\^et   & Entr\'ee TOR & I0.1 & Arr\^et en fin de cycle \\
+    Capteur pi\`ece  & Entr\'ee TOR & I0.2 & D\'etection pi\`ece sur convoyeur \\
+    Arr\^et d'urgence & Entr\'ee TOR & I0.3 & Arr\^et imm\'ediat s\'ecuris\'e (NF) \\
+    FDC V\'erin +    & Entr\'ee TOR & I0.4 & V\'erin sorti en but\'ee \\
+    FDC V\'erin --   & Entr\'ee TOR & I0.5 & V\'erin rentr\'e en but\'ee \\
+    Robot\_Ready     & Entr\'ee TOR & I0.6 & Robot pr\^et \`a recevoir un ordre \\
+    Robot\_End       & Entr\'ee TOR & I0.7 & Fin du cycle robot confirm\'ee \\
+    Robot\_Fault     & Entr\'ee TOR & I1.0 & D\'efaut robot d\'etect\'e \\
+    Mode Auto/Manuel & Entr\'ee TOR & I1.1 & S\'electeur mode de marche \\
+    \midrule
+    Moteur convoyeur & Sortie TOR & Q0.0 & Activation variateur convoyeur \\
+    Start Robot      & Sortie TOR & Q0.1 & D\'eclenchement cycle robot \\
+    V\'erin sortie   & Sortie TOR & Q0.2 & Extension v\'erin de blocage \\
+    V\'erin rentr\'ee & Sortie TOR & Q0.3 & R\'etraction v\'erin \\
+    Voyant Marche    & Sortie TOR & Q0.4 & Indicateur cycle actif (vert) \\
+    Voyant D\'efaut  & Sortie TOR & Q0.5 & Indicateur anomalie (rouge) \\
+    \bottomrule
+  \end{tabular}
+  \normalsize
+\end{table}
+
+% ============================================================
+%  CHAPITRE 5 — ANALYSE FONCTIONNELLE
+% ============================================================
+\chapter{Analyse Fonctionnelle}
+\label{chap:fonc}
+
+\section{S\'equence de fonctionnement}
+
+\begin{enumerate}[label=\textbf{\'Etape \arabic*~:}, leftmargin=*, wide, itemsep=6pt]
+  \item \textbf{Initialisation} --- v\'erification de l'\'etat de tous les \'equipements
+  \item \textbf{Attente pi\`ece} --- convoyeur actif, robot en position HOME
+  \item \textbf{D\'etection} --- capteur I0.2 d\'etecte la pi\`ece, activation de M0.0
+  \item \textbf{Arr\^et convoyeur} --- Q0.0 passe \`a 0
+  \item \textbf{Blocage pi\`ece} --- Q0.2 active le v\'erin, confirmation par I0.4
+  \item \textbf{Commande robot} --- Q0.1 envoie le signal Start au KRC4
+  \item \textbf{Cycle robot} --- pr\'ehension et d\'epose de la pi\`ece
+  \item \textbf{Fin cycle robot} --- KRC4 active \$OUT[2], r\'eception sur I0.7
+  \item \textbf{Lib\'eration v\'erin} --- Q0.3 r\'etracte le v\'erin, confirmation I0.5
+  \item \textbf{Red\'emarrage} --- Q0.0 repasse \`a 1, retour \'etape 2
+\end{enumerate}
+
+\section{Modes de fonctionnement}
+
+\begin{table}[H]
+  \centering
+  \caption{Modes de fonctionnement du syst\`eme}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{3.5cm} L{5.5cm} L{4cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Mode} &
+    \color{white}\textbf{Description} &
+    \color{white}\textbf{Activation} \\
+    \midrule
+    Automatique       & Cycle complet sans intervention & I1.1=1 + START \\
+    Manuel            & Commande individuelle des actionneurs & I1.1=0 \\
+    Pas \`a pas       & Avancement \'etape par \'etape & S\'electeur + Step \\
+    D\'efaut          & Arr\^et cycle, voyant rouge & Automatique \\
+    Arr\^et d'urgence & Coupure imm\'ediate s\'ecuris\'ee & E-Stop I0.3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================
+%  CHAPITRE 6 — GRAFCET
+% ============================================================
+\chapter{GRAFCET du Syst\`eme}
+\label{chap:grafcet}
+
+\section{GRAFCET de niveau 1 --- point de vue syst\`eme}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    scale=0.72, transform shape,
+    initgrafstep/.style={
+      draw=bleuFonce, fill=bleuFonce, text=white,
+      minimum size=1.3cm, font=\bfseries\large,
+      drop shadow={shadow xshift=2pt,shadow yshift=-2pt,opacity=0.4}
+    },
+    grafstep/.style={
+      draw=bleuMoyen, fill=bleuClair,
+      minimum size=1.3cm, font=\bfseries\large,
+      drop shadow={shadow xshift=2pt,shadow yshift=-2pt,opacity=0.3}
+    },
+    action/.style={
+      draw=orange, fill=orange!15, rounded corners=4pt,
+      minimum width=6cm, minimum height=0.85cm,
+      font=\small\bfseries, align=left,
+      inner sep=5pt
+    },
+    trans/.style={font=\small\itshape, color=bleuFonce},
+    arr/.style={-{Stealth[length=7pt]}, very thick, bleuFonce}
+  ]
+
+    \node[initgrafstep] (e0) at (0, 0)    {0};
+    \node[grafstep]     (e1) at (0,-2.5)  {1};
+    \node[grafstep]     (e2) at (0,-5)    {2};
+    \node[grafstep]     (e3) at (0,-7.5)  {3};
+    \node[grafstep]     (e4) at (0,-10)   {4};
+    \node[grafstep]     (e5) at (0,-12.5) {5};
+    \node[grafstep]     (e6) at (0,-15)   {6};
+    \node[grafstep]     (e7) at (0,-17.5) {7};
+
+    \draw[bleuFonce, very thick] (-0.85,0.85) rectangle (0.85,-0.85);
+
+    \node[action] (a0) at (5.5, 0)
+      {\textcolor{bleuFonce}{Init.} --- Reset tous bits / outputs};
+    \node[action] (a1) at (5.5,-2.5)
+      {\textcolor{bleuFonce}{Q0.0} = 1 \quad Convoyeur en marche};
+    \node[action] (a2) at (5.5,-5)
+      {\textcolor{bleuFonce}{Q0.0} = 1 \quad Attente d\'etection pi\`ece};
+    \node[action] (a3) at (5.5,-7.5)
+      {\textcolor{bleuFonce}{Q0.0} = 0 \quad \textcolor{orange}{Q0.2} = 1 \quad V\'erin sortie};
+    \node[action] (a4) at (5.5,-10)
+      {\textcolor{orange}{Q0.1} = 1 \quad Impulsion Start Robot};
+    \node[action] (a5) at (5.5,-12.5)
+      {\textcolor{bleuFonce}{Q0.1} = 0 \quad Attente fin cycle robot};
+    \node[action] (a6) at (5.5,-15)
+      {\textcolor{bleuFonce}{Q0.2} = 0 \quad \textcolor{orange}{Q0.3} = 1 \quad V\'erin rentr\'ee};
+    \node[action] (a7) at (5.5,-17.5)
+      {\textcolor{bleuFonce}{Q0.3} = 0 \quad \textcolor{orange}{Q0.0} = 1 \quad Red\'em.};
+
+    \foreach \e/\a in {e0/a0,e1/a1,e2/a2,e3/a3,e4/a4,e5/a5,e6/a6,e7/a7}
+      \draw[orange, thick] (\e.east) -- (\a.west);
+
+    \foreach \s/\e/\t in {
+      e0/e1/{I0.0 (START)},
+      e1/e2/{Marche confirm\'ee},
+      e2/e3/{I0.2 (Pi\`ece d\'etect\'ee)},
+      e3/e4/{I0.4 ET Tempo 500ms},
+      e4/e5/{I0.6=0 (Robot d\'emarr\'e)},
+      e5/e6/{I0.7=1 (Cycle\_End)},
+      e6/e7/{I0.5 (V\'erin rentr\'e)}
+    }{
+      \draw[arr] (\s.south) -- (\e.north);
+      \path (\s.south) -- (\e.north) coordinate[pos=0.5] (mid);
+      \draw[bleuMoyen, thick] ([xshift=-0.65cm]mid) -- ([xshift=0.65cm]mid);
+      \node[trans, left=0.7cm of mid] {\t};
+    }
+
+    \draw[arr, dashed, orange, very thick]
+      (e7.south) -- ++(0,-0.7)
+      -- ++(3.5,0)
+      -- ++(0,13.2)
+      -- ++(-3.5,0)
+      -- (e2.east);
+    \node[orange, font=\small\bfseries, align=center] at (3.5,-11.5)
+      {Retour\\automatique\\vers \'etape 2};
+
+  \end{tikzpicture}
+  \caption{GRAFCET de niveau 1 du syst\`eme de tri automatis\'e}
+  \label{fig:grafcet}
+\end{figure}
+
+\section{GRAFCET de s\'ecurit\'e --- niveau 2}
+
+\begin{infobox}[GRAFCET de S\'ecurit\'e --- Logique de for\c{c}age]
+  \begin{itemize}
+    \item \textbf{\'Etat 0} (nominal) : I0.3 = 1 (E-Stop non actionn\'e)
+    \item \textbf{Transition 0$\rightarrow$1} : I0.3 = 0 (E-Stop actionn\'e, contact NF ouvert)
+    \item \textbf{\'Etat 1} (urgence) : For\c{c}age du GRAFCET principal en \'etape 0 ;
+          toutes sorties \`a 0 ; voyant rouge allum\'e (Q0.5)
+    \item \textbf{Transition 1$\rightarrow$0} : I0.3 = 1 ET bouton d'acquittement enfonc\'e
+  \end{itemize}
+\end{infobox}
+
+% ============================================================
+%  CHAPITRE 7 — SCHEMAS ELECTRIQUES
+% ============================================================
+\chapter{Sch\'emas \'Electriques}
+\label{chap:schema}
+
+\section{Synoptique du c\^ablage g\'en\'eral}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    scale=0.72, transform shape,
+    rail/.style={draw=bleuFonce, very thick, fill=bleuFonce!10},
+    comp/.style={
+      draw=bleuMoyen, fill=bleuClair, rounded corners=4pt,
+      minimum width=3.6cm, minimum height=0.9cm,
+      font=\small\bfseries, align=center,
+      drop shadow={shadow xshift=1.5pt,shadow yshift=-1.5pt,opacity=0.3}
+    },
+    wire/.style={thick, bleuFonce},
+    outwire/.style={thick, orange}
+  ]
+    \draw[rail] (-0.5,8.5) rectangle (13.5,8.9);
+    \draw[rail] (-0.5,-0.4) rectangle (13.5,0);
+    \node[white,font=\bfseries\small] at (0.5,8.7) {+24V};
+    \node[white,font=\bfseries\small] at (0.5,-0.2) {0V};
+
+    \node[comp, fill=orange!20, draw=orange, minimum width=4cm]
+      (plc_in) at (3.5,4.5) {\api{} S7-1200\\Entr\'ees num\'eriques};
+
+    \foreach \i/\lbl/\addr in {
+      0/{Bt. START (NO)}/{I0.0},
+      1/{Bt. STOP (NF)}/{I0.1},
+      2/{Capteur piece PNP}/{I0.2},
+      3/{E-Stop + Pilz}/{I0.3},
+      4/{FDC Verin +}/{I0.4},
+      5/{FDC Verin --}/{I0.5},
+      6/{KUKA OUT1 Ready}/{I0.6},
+      7/{KUKA OUT2 End}/{I0.7}
+    }{
+      \pgfmathsetmacro{\yy}{8.0 - \i * 0.85}
+      \node[comp, minimum width=3.8cm, minimum height=0.7cm,
+            font=\scriptsize\bfseries]
+        (inp\i) at (-2.5, \yy) {\lbl};
+      \draw[wire] (inp\i.east) -- (3.0, \yy)
+        node[midway, above, font=\scriptsize\color{bleuFonce}] {\addr};
+    }
+
+    \node[comp, fill=bleuFonce, text=white, minimum width=4cm]
+      (plc_out) at (3.5,2.5) {\api{} S7-1200\\Sorties num\'eriques};
+
+    \foreach \i/\lbl/\addr in {
+      0/{Convoyeur (KM1)}/{Q0.0},
+      1/{Start Robot}/{Q0.1},
+      2/{Verin sortie (YV1)}/{Q0.2},
+      3/{Verin rentree (YV2)}/{Q0.3},
+      4/{Voyant Marche (H1)}/{Q0.4},
+      5/{Voyant Defaut (H2)}/{Q0.5}
+    }{
+      \pgfmathsetmacro{\yy}{3.8 - \i * 0.85}
+      \node[comp, minimum width=3.8cm, minimum height=0.7cm,
+            font=\scriptsize\bfseries, fill=orange!15, draw=orange]
+        (out\i) at (9.5, \yy) {\lbl};
+      \draw[outwire] (4.0, \yy) -- (out\i.west)
+        node[midway, above, font=\scriptsize\color{orange}] {\addr};
+    }
+  \end{tikzpicture}
+  \caption{Synoptique de c\^ablage des entr\'ees/sorties de l'\api{}}
+  \label{fig:cablage}
+\end{figure}
+
+\section{Circuit de s\'ecurit\'e arr\^et d'urgence}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    scale=0.9, transform shape,
+    relay/.style={
+      draw=rougeAlerte, fill=rougeAlerte!10, rounded corners=6pt,
+      minimum width=5cm, minimum height=3.5cm,
+      font=\small\bfseries, align=center
+    },
+    contact/.style={
+      draw=bleuMoyen, fill=bleuClair, rounded corners=3pt,
+      minimum width=3cm, minimum height=0.7cm,
+      font=\scriptsize\bfseries, align=center
+    },
+    arr/.style={-{Stealth[length=6pt]}, thick}
+  ]
+    \node[relay] (pilz) at (5,0)
+      {\textbf{PILZ PNOZ X3}\\[6pt]Relais de s\'ecurit\'e\\SIL 2 / PLd};
+
+    \node[contact, fill=rougeAlerte!20, draw=rougeAlerte]
+      (estop1) at (0, 2) {E-Stop 1 (NF)};
+    \node[contact, fill=rougeAlerte!20, draw=rougeAlerte]
+      (estop2) at (0, 0.5) {E-Stop 2 (NF)};
+    \node[font=\scriptsize, color=gray, align=center] at (0,-0.8)
+      {C\^ablage bipolaire\\coupure double};
+
+    \draw[thick, rougeAlerte]
+      (estop1.east) -- ++(1,0) |- (pilz.west);
+    \draw[thick, rougeAlerte]
+      (estop2.east) -- ++(0.5,0) |- (pilz.west);
+
+    \node[contact] (s1) at (10, 2.2)
+      {Contact 13-14\\Circuit robot};
+    \node[contact] (s2) at (10, 0.8)
+      {Contact 23-24\\PLC I0.3};
+    \node[contact] (s3) at (10,-0.6)
+      {Contact 33-34\\Alim. sorties DO};
+
+    \draw[arr, bleuFonce] (pilz.east) -- ++(0.5,0) |- (s1.west);
+    \draw[arr, bleuFonce] (pilz.east) -- ++(0.5,0) |- (s2.west);
+    \draw[arr, bleuFonce] (pilz.east) -- ++(0.5,0) |- (s3.west);
+
+    \draw[arr, thick, bleuFonce]
+      (5,3.5) -- (pilz.north)
+      node[above, font=\scriptsize\bfseries] {A1: +24V / A2: 0V};
+
+    \node[font=\scriptsize\itshape, color=gray, align=center] at (5,-2.2)
+      {Homologu\'e EN ISO 13849-1 --- Cat\'egorie 3 --- PLd};
+  \end{tikzpicture}
+  \caption{Circuit de s\'ecurit\'e --- Relais Pilz PNOZ X3}
+  \label{fig:secu_circuit}
+\end{figure}
+
+% ============================================================
+%  CHAPITRE 8 — PROGRAMMATION LADDER
+% ============================================================
+\chapter{Programmation Ladder}
+\label{chap:ladder}
+
+\section{Symboles fondamentaux}
+
+\begin{table}[H]
+  \centering
+  \caption{Symboles fondamentaux du langage Ladder (IEC 61131-3)}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{3.5cm} C{3cm} L{6cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{\'El\'ement} &
+    \color{white}\textbf{Notation} &
+    \color{white}\textbf{Signification} \\
+    \midrule
+    Contact NO        & \texttt{--[ ]--}  & Passant si bit = 1 \\
+    Contact NF        & \texttt{--[/]--}  & Passant si bit = 0 \\
+    Bobine            & \texttt{--( )--}  & Affectation sortie / m\'emoire \\
+    Bobine Set        & \texttt{--(S)--}  & Mise \`a 1 irr\'eversible \\
+    Bobine Reset      & \texttt{--(R)--}  & Mise \`a 0 irr\'eversible \\
+    Front montant     & \texttt{--[P]--}  & Impulsion sur front montant \\
+    Front descendant  & \texttt{--[N]--}  & Impulsion sur front descendant \\
+    Temporisateur TON & \texttt{-[TON]-}  & Temporisateur \`a l'enclenchement \\
+    Compteur CTU      & \texttt{-[CTU]-}  & Compteur croissant \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{R\'eseaux Ladder principaux}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 1 : Marche/Arret convoyeur avec auto-maintien}]
+; Auto-maintien -- arret prioritaire -- E-Stop securise
+
++-[ I0.0 ]--+--[/I0.1]--[/I0.3]--[/M0.0]--(Q0.0)--+
+| [START]   |  [STOP]   [ESTOP]   [Piece]           |
+|           |                                        |
++-[ Q0.0 ]--+  <- auto-maintien
+  [CONV]
+\end{lstlisting}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 2 : Detection piece avec anti-rebond 50 ms}]
++-[P I0.2]--[TON T1 PT:50ms]--+
+                                |
++-[ T1.Q ]---------------------( S M0.0 )-- ; Set bit piece
+\end{lstlisting}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 3 : Commande verin de blocage}]
++-[ M0.0 ]--[/I0.3]---------------( Q0.2 )-- ; Verin sortie
++-[ M0.0 ]--[/I0.3]---------------( R Q0.3)-- ; Reset verin -
+\end{lstlisting}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 4 : Start Robot (impulsion TP 200 ms)}]
++-[M0.0]--[I0.4]--[I0.6]--[/I0.3]--[TP T2 PT:200ms]--+
+  [Piece] [Vrin+] [Ready] [EStop]                      |
++-[ T2.Q ]---------------------------------------------( Q0.1 )--
+\end{lstlisting}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 5 : Timeout 30 s sur reponse robot}]
++-[P Q0.1]--[TON T3 PT:30000ms]--+
+                                   |
++-[ T3.Q ]--[/I0.7]--------------( S M10.0 )-- ; Defaut timeout
++-[P I0.7]-------------------------( S M0.1 )-- ; Cycle_End recu
+\end{lstlisting}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 6 : Liberation verin et redemarrage}]
++-[ M0.1 ]--[/I0.3]------------------( Q0.3 )-- ; Verin rentre
++-[ M0.1 ]--[ I0.5 ]--+--( R M0.0 )-- ; Reset piece
+  [FinCyc] [Vrin-]     +--( R M0.1 )-- ; Reset Cycle_End
+\end{lstlisting}
+
+\begin{lstlisting}[style=ladder,
+  caption={Reseau 7 : Gestion defauts et voyant rouge}]
++-[ I1.0  ]-------------------------( S M10.1 )-- ; Defaut robot
++-[ M10.0 ]-------------------------( S M10.1 )-- ; Defaut timeout
++-[ M10.1 ]--[/I0.3]----------------( Q0.5   )-- ; Voyant rouge
++-[ M10.1 ]--[ACQ]--[ I0.3 ]--+--( R M10.0 )--
+                                +--( R M10.1 )--
+\end{lstlisting}
+
+% ============================================================
+%  CHAPITRE 9 — COMMUNICATION
+% ============================================================
+\chapter{Communication PLC -- Robot KUKA}
+\label{chap:comm}
+
+\section{Architecture \profinet{} IO}
+
+\begin{infobox}[Configuration r\'eseau \profinet{}]
+  \begin{tabular}{@{}lll@{}}
+    \textbf{\'Equipement} & \textbf{Adresse IP} & \textbf{Nom \profinet{}} \\
+    \hline
+    PLC S7-1200  & 192.168.1.1 & \texttt{plc-kuka} \\
+    KRC4 Robot   & 192.168.1.2 & \texttt{kuka-robot} \\
+  \end{tabular}\\[6pt]
+  Cycle de communication : \SI{8}{\milli\second} ---
+  Taille PDU : 32 octets par sens
+\end{infobox}
+
+\section{Diagramme de s\'equence PLC -- Robot}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    scale=0.88, transform shape,
+    line/.style={very thick},
+    msg/.style={-{Stealth[length=7pt]}, thick},
+    lbl/.style={font=\small, fill=white, inner sep=3pt, align=center},
+    time/.style={font=\scriptsize\itshape, color=gray}
+  ]
+    \draw[line, bleuFonce] (0,0) -- (0,-14)
+      node[above, at start, font=\bfseries\normalsize, color=bleuFonce]
+      {\api{} S7-1200};
+    \draw[line, bleuMoyen!60!black] (8,0) -- (8,-14)
+      node[above, at start, font=\bfseries\normalsize, color=bleuMoyen!60!black]
+      {Robot KRC4};
+
+    \draw[msg, bleuFonce, ->]
+      (0,-1) -- (8,-1)
+      node[lbl, midway, above] {Q0.1=1 : START\_ROBOT};
+    \node[time] at (4,-1.5) {impulsion 200ms};
+
+    \draw[msg, bleuMoyen!60!black, ->]
+      (8,-2.5) -- (0,-2.5)
+      node[lbl, midway, above] {\$OUT[1]=0 : Robot\_Ready=0};
+
+    \draw[msg, dashed, gray, ->]
+      (8,-4) -- (8,-6)
+      node[lbl, midway, right=4pt] {Cycle interne robot\\(PTP, LIN, prise, depose)};
+
+    \draw[msg, bleuMoyen!60!black, ->]
+      (8,-7) -- (0,-7)
+      node[lbl, midway, above] {\$OUT[2]=1 : Cycle\_End (I0.7)};
+
+    \draw[msg, bleuFonce, ->]
+      (0,-8.5) -- (8,-8.5)
+      node[lbl, midway, above] {Q0.1=0 : lib\'eration START};
+
+    \draw[msg, bleuMoyen!60!black, ->]
+      (8,-10) -- (0,-10)
+      node[lbl, midway, above] {\$OUT[2]=0 / \$OUT[1]=1 : Robot\_Ready};
+
+    \draw[thick, rougeAlerte, dashed]
+      (0,-1.2) -- ++(0.5,0) -- ++(0,-4)
+      node[right, font=\scriptsize\bfseries\color{rougeAlerte}]
+      {TON 30s} -- ++(0,-2);
+    \draw[thick, rougeAlerte, ->]
+      (-0.5,-7.2) -- (0,-7.2);
+    \node[font=\scriptsize\color{rougeAlerte}, align=left] at (-2,-7.2)
+      {Si I0.7=0\\apr\`es 30s :\\D\'efaut M10.0};
+
+    \node[font=\small, align=left] at (4,-12.5) {%
+      \textcolor{bleuFonce}{$\longrightarrow$} PLC $\rightarrow$ Robot \quad
+      \textcolor{bleuMoyen!60!black}{$\longrightarrow$} Robot $\rightarrow$ PLC \quad
+      \textcolor{rougeAlerte}{- - -} Surveillance timeout};
+
+  \end{tikzpicture}
+  \caption{Diagramme de s\'equence de la communication PLC -- Robot KUKA}
+  \label{fig:seqdiag}
+\end{figure}
+
+\section{Table de correspondance des signaux}
+
+\begin{table}[H]
+  \centering
+  \caption{Signaux PLC $\rightarrow$ Robot}
+  \rowcolors{2}{grisClaire}{white}
+  \small
+  \begin{tabular}{C{2.2cm} C{2.1cm} L{3.4cm} L{4cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Bit PLC} &
+    \color{white}\textbf{Variable KRL} &
+    \color{white}\textbf{Signal} &
+    \color{white}\textbf{Description} \\
+    \midrule
+    Q0.1   & \texttt{\$IN[1]} & START\_ROBOT   & D\'emarrage programme robot \\
+    DBX0.1 & \texttt{\$IN[2]} & RESET\_ROBOT   & R\'einitialisation apr\`es d\'efaut \\
+    DBX0.2 & \texttt{\$IN[3]} & STOP\_ROBOT    & Arr\^et en fin de cycle \\
+    DBX0.3 & \texttt{\$IN[4]} & PIECE\_TYPE\_A & Pi\`ece de cat\'egorie A \\
+    DBX0.4 & \texttt{\$IN[5]} & PIECE\_TYPE\_B & Pi\`ece de cat\'egorie B \\
+    DBX0.5 & \texttt{\$IN[6]} & VITESSE\_LENTE & Vitesse r\'eduite \\
+    DBX0.6 & \texttt{\$IN[7]} & HOME\_REQ      & Demande retour HOME \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+\normalsize
+
+% ============================================================
+%  CHAPITRE 10 — SECURITE INDUSTRIELLE
+% ============================================================
+\chapter{S\'ecurit\'e Industrielle}
+\label{chap:secu}
+
+\section{Niveaux de performance}
+
+\begin{table}[H]
+  \centering
+  \caption{Fonctions de s\'ecurit\'e et niveaux de performance}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{4cm} C{2cm} C{2cm} L{5cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Fonction} &
+    \color{white}\textbf{PL requis} &
+    \color{white}\textbf{SIL} &
+    \color{white}\textbf{Solution} \\
+    \midrule
+    Arr\^et d'urgence (E-Stop) & PLd & SIL 2 & Relais Pilz PNOZ X3 \\
+    Arr\^et s\'ecuris\'e robot & PLd & SIL 2 & Safe KUKA KRC4 \\
+    Barri\`ere immat\'erielle  & PLe & SIL 3 & Rideau optique Sick C4000 \\
+    Fin de course s\'ecuris\'e & PLc & SIL 1 & FDC \`a ouverture positive \\
+    Mode manuel s\'ecuris\'e   & PLc & SIL 1 & Validation 3 positions \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Zonage de s\'ecurit\'e}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[scale=0.9]
+    \fill[red!20] (2,1) rectangle (7,6);
+    \draw[red, very thick, dashed] (2,1) rectangle (7,6);
+    \node[red, font=\bfseries\normalsize] at (4.5,6.4)
+      {ZONE ROUGE --- Acc\`es interdit (mode auto)};
+
+    \fill[orange!15] (1,0.5) rectangle (8,6.5);
+    \draw[orange, thick, dashed] (1,0.5) rectangle (8,6.5);
+    \node[orange, font=\bfseries\small] at (4.5,7.0)
+      {ZONE ORANGE --- P\'erim\`etre surveill\'e (barri\`eres)};
+
+    \fill[green!15] (0,0) rectangle (12,7.5);
+    \draw[green!60!black, thick] (0,0) rectangle (12,7.5);
+    \node[green!60!black, font=\bfseries\small] at (10.5,7.0)
+      {ZONE VERTE};
+    \node[green!60!black, font=\small] at (10.5,6.5) {Acc\`es libre};
+
+    \fill[bleuFonce] (3.8,3) circle (0.7cm);
+    \draw[bleuFonce, thick] (3.8,3) -- ++(0,1.5);
+    \draw[bleuFonce, thick] (3.8,3) -- ++(1.2,0.8);
+    \node[white, font=\bfseries\small] at (3.8,3) {R};
+    \node[bleuFonce, font=\bfseries\footnotesize] at (3.8,1.5) {Robot KUKA};
+
+    \fill[bleuMoyen!50] (5.5,2.5) rectangle (6.8,3.5);
+    \node[font=\footnotesize\bfseries] at (6.15,3) {Conv.};
+
+    \fill[green!40!black] (10,1) rectangle (11.5,2.5);
+    \node[white, font=\footnotesize\bfseries, align=center] at (10.75,1.75)
+      {Poste\\op\'erateur};
+
+    \draw[orange, ultra thick, ->]
+      (1.0,3) -- (2.0,3)
+      node[midway, above, font=\scriptsize\bfseries\color{orange}]
+      {Barri\`ere};
+    \draw[orange, ultra thick, ->]
+      (8.0,3) -- (7.0,3)
+      node[midway, above, font=\scriptsize\bfseries\color{orange}]
+      {Barri\`ere};
+
+    \fill[red!20]        (0.2,8.2) rectangle (0.7,8.7);
+    \fill[orange!15]     (2.2,8.2) rectangle (2.7,8.7);
+    \fill[green!15]      (4.2,8.2) rectangle (4.7,8.7);
+    \draw[red,thick]     (0.2,8.2) rectangle (0.7,8.7);
+    \draw[orange,thick]  (2.2,8.2) rectangle (2.7,8.7);
+    \draw[green!60!black,thick] (4.2,8.2) rectangle (4.7,8.7);
+    \node[font=\scriptsize] at (1.7,8.45) {Zone interdite};
+    \node[font=\scriptsize] at (3.7,8.45) {Zone surveill\'ee};
+    \node[font=\scriptsize] at (5.7,8.45) {Zone libre};
+  \end{tikzpicture}
+  \caption{Plan de zonage de s\'ecurit\'e du poste robotis\'e}
+  \label{fig:zonage}
+\end{figure}
+
+% ============================================================
+%  CHAPITRE 11 — SIMULATION ET RESULTATS
+% ============================================================
+\chapter{Simulation et R\'esultats}
+\label{chap:simu}
+
+\section{R\'esultats des tests}
+
+\begin{longtable}{C{0.8cm} L{4.5cm} L{3.8cm} C{2.5cm} C{1.5cm}}
+  \caption{Tableau de bord des tests de simulation}
+  \label{tab:tests} \\
+  \toprule
+  \rowcolor{bleuMoyen}
+  \color{white}\textbf{N\degre} &
+  \color{white}\textbf{Sc\'enario} &
+  \color{white}\textbf{R\'esultat attendu} &
+  \color{white}\textbf{R\'esultat} &
+  \color{white}\textbf{Statut} \\
+  \midrule
+  \endfirsthead
+  \multicolumn{5}{c}{\tablename~\thetable{} (suite)} \\
+  \toprule
+  \rowcolor{bleuMoyen}
+  \color{white}\textbf{N\degre} &
+  \color{white}\textbf{Sc\'enario} &
+  \color{white}\textbf{R\'esultat attendu} &
+  \color{white}\textbf{R\'esultat} &
+  \color{white}\textbf{Statut} \\
+  \midrule
+  \endhead
+  \rowcolor{grisClaire}
+  T01 & D\'emarrage syst\`eme normal     & Robot HOME, convoyeur actif         & Conforme   & \textcolor{green!60!black}{\checkmark} \\
+  T02 & D\'etection pi\`ece + arr\^et    & Convoyeur stop $<$ 50ms             & 45ms       & \textcolor{green!60!black}{\checkmark} \\
+  \rowcolor{grisClaire}
+  T03 & Cycle robot pi\`ece type A       & D\'epose zone A en 8.2s             & 8.1s       & \textcolor{green!60!black}{\checkmark} \\
+  T04 & Cycle robot pi\`ece type B       & D\'epose zone B en 9.5s             & 9.4s       & \textcolor{green!60!black}{\checkmark} \\
+  \rowcolor{grisClaire}
+  T05 & E-Stop en cours de cycle         & Arr\^et $<$ 200ms s\'ecuris\'e      & 180ms      & \textcolor{green!60!black}{\checkmark} \\
+  T06 & D\'efaut robot simul\'e          & Voyant rouge, arr\^et cycle          & Conforme   & \textcolor{green!60!black}{\checkmark} \\
+  \rowcolor{grisClaire}
+  T07 & Timeout communication robot      & D\'efaut apr\`es 30s                & 29.8s      & \textcolor{green!60!black}{\checkmark} \\
+  T08 & Red\'emarrage apr\`es E-Stop     & Retour cycle apr\`es acquittement   & Conforme   & \textcolor{green!60!black}{\checkmark} \\
+  \rowcolor{grisClaire}
+  T09 & Mode pas \`a pas                 & Avancement par \'etapes             & Conforme   & \textcolor{green!60!black}{\checkmark} \\
+  T10 & 100 cycles cons\'ecutifs         & 0 erreur, cadence stable            & 42s/cyc    & \textcolor{green!60!black}{\checkmark} \\
+  \bottomrule
+\end{longtable}
+
+\section{Indicateurs de performance}
+
+\begin{table}[H]
+  \centering
+  \caption{Performances mesur\'ees lors de la simulation}
+  \rowcolors{2}{grisClaire}{white}
+  \begin{tabular}{L{5cm} C{3cm} C{3cm} C{2cm}}
+    \toprule
+    \rowcolor{bleuMoyen}
+    \color{white}\textbf{Indicateur} &
+    \color{white}\textbf{Mesur\'e} &
+    \color{white}\textbf{Objectif} &
+    \color{white}\textbf{\'Ecart} \\
+    \midrule
+    Cadence de production       & 85 pi\`eces/h & 80 pi\`eces/h     & \textcolor{green!60!black}{+6.3\%} \\
+    Temps de cycle moyen        & \SI{42.3}{s}  & $<$ \SI{45}{s}    & \textcolor{green!60!black}{OK} \\
+    Temps de r\'eponse E-Stop   & \SI{180}{ms}  & $<$ \SI{200}{ms}  & \textcolor{green!60!black}{OK} \\
+    Taux de d\'etection pi\`ece & 100\%         & $\geq$ 99.5\%     & \textcolor{green!60!black}{OK} \\
+    Taux d'erreur position.     & 0.02\%        & $<$ 0.1\%         & \textcolor{green!60!black}{OK} \\
+    Disponibilit\'e (8 heures)  & 99.8\%        & $>$ 99\%          & \textcolor{green!60!black}{OK} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ============================================================
+%  CHAPITRE 12 — CONCLUSION
+% ============================================================
+\chapter{Conclusion G\'en\'erale}
+
+\section{Bilan du projet}
+
+Ce projet d'automatisme industriel a permis de mettre en pratique l'ensemble des
+comp\'etences acquises en g\'enie \'electrique et en automatique industrielle. La conception
+et la r\'ealisation du syst\`eme de tri automatis\'e int\'egrant un robot \kuka{} et un
+automate \siemens{} constituent un cas industriel complet.
+
+\begin{itemize}[itemsep=4pt]
+  \item[$\checkmark$] Architecture mat\'erielle et logicielle d\'efinie et document\'ee
+  \item[$\checkmark$] Programmation Ladder compl\`ete sous \tia{}
+  \item[$\checkmark$] Communication \profinet{} PLC--Robot op\'erationnelle
+  \item[$\checkmark$] GRAFCET mod\'elisant le comportement s\'equentiel complet
+  \item[$\checkmark$] Fonctions de s\'ecurit\'e PLd/SIL2 impl\'ement\'ees
+  \item[$\checkmark$] Simulation valid\'ee, performances d\'epassant les objectifs
+\end{itemize}
+
+\section{Perspectives d'am\'elioration}
+
+\begin{enumerate}[label=\textbf{\arabic*.}, itemsep=4pt]
+  \item Int\'egration d'un syst\`eme de vision industrielle pour le tri par forme et couleur
+  \item D\'eploiement d'un SCADA pour la supervision et la tra\c{c}abilit\'e
+  \item Maintenance pr\'edictive bas\'ee sur l'analyse des donn\'ees de cycle (IIoT)
+  \item Extension \`a une architecture multi-robots en r\'eseau
+  \item Certification ISO 10218 pour robot collaboratif (cobot)
+\end{enumerate}
+
+% ── Bibliographie ────────────────────────────────────────────
+\nocite{*}
+\printbibliography[heading=bibintoc, title={Bibliographie}]
+
+% ── Annexes ──────────────────────────────────────────────────
+\appendix
+\chapter{Param\`etres de configuration TIA Portal}
+
+\begin{infobox}[Configuration mat\'erielle TIA Portal V17]
+  \begin{itemize}
+    \item CPU : S7-1200 CPU 1214C DC/DC/DC --- R\'ef. : 6ES7 214-1AG40-0XB0
+    \item Adresse IP : 192.168.1.1 --- Masque : 255.255.255.0
+    \item Nom \profinet{} : \texttt{plc-kuka}
+    \item Cycle \profinet{} : \SI{8}{\milli\second}
+    \item Mode : RUN-P
+  \end{itemize}
+\end{infobox}
+
+\chapter{R\'ef\'erences normatives}
+
+\begin{itemize}
+  \item IEC 61131-3:2013 --- Langages de programmation des automates
+  \item IEC 60848:2013 --- Langage GRAFCET
+  \item EN ISO 13849-1:2015 --- S\'ecurit\'e des machines, parties SCS
+  \item IEC 62061:2021 --- S\'ecurit\'e fonctionnelle
+  \item IEC 61158 --- R\'eseaux de terrain industriels (\profinet{})
+  \item ISO 10218-2:2011 --- Robots industriels
+  \item Directive 2006/42/CE --- Directive Machines
+\end{itemize}
+
+\end{document}
